@@ -1,3 +1,9 @@
+// script sidebar toggled
+$('#menu-toggle').click(function(event) {
+  event.preventDefault();
+  $('#wrapper').toggleClass('toggled');
+});
+
 $(document).ready(() => {
   // obteniendo elementos del DOM
   var sectionHome = $('#home-search');
@@ -63,6 +69,156 @@ $(document).ready(() => {
       getMovies(inputTextSearch.val());
     };
   });
+
+  itemDrama.on('click', searchDataGenre);
+  itemAction.on('click', searchDataGenre);
+  itemAdventure.on('click', searchDataGenre);
+  itemAnimation.on('click', searchDataGenre);
+  itemComedy.on('click', searchDataGenre);
+  itemHorror.on('click', searchDataGenre);
+  itemRomance.on('click', searchDataGenre);
+  btnFavorites.on('click', addFavoritesMovies);
+
+  function addFavoritesMovies() {
+    var apiMovie = $(this).attr('data-api');
+    var movieId = $(this).attr('data-id');
+    var dataMovieSelect = {
+      id: movieId,
+      apiName: apiMovie,
+    };
+    if ($(this).text() === 'Add to Favorites') {
+      $(this).text('Added to Favorites');
+      dataFavorites.push(dataMovieSelect);
+    } else {
+      $(this).text('Add to Favorites');
+      var position = dataFavorites.indexOf(dataMovieSelect);
+      dataFavorites.splice(position, 1);
+    };
+    console.log(dataFavorites);
+  };
+
+  // creando seccion favoritos
+  var itemFavorite = $('#v-pills-favourite-tab');
+  var sectionFavorite = $('#favorite-section');
+  itemFavorite.on('click', createSectionFavorites);
+  console.log(sectionFavorite);
+
+  function createSectionFavorites() {
+    console.log('empezando a crear section Home');
+    sectionFavorite.html('');
+    var moviesFavoritesHtml;
+    for (let index = 0; index < dataFavorites.length; index++) {
+      var movie = dataFavorites[index];
+      var dataMovie;
+      if (movie['apiName'] === 'tmdb') {
+        dataMovie = 'https://api.themoviedb.org/3/movie/' + movie.id + '?api_key=5076f0f992d07860e10ee70c4f034e5e';
+        $.getJSON(dataMovie)
+          .then((result) => {
+            console.log(result);
+            moviesFavoritesHtml = `
+            <div class="col-6 col-sm-4 col-md-2">
+              <div class="text-center">
+                <img src="http://image.tmdb.org/t/p/w185/${result.poster_path}" class="img-fluid selected-movie" data-id="${movie.id}" data-api="tmdb">
+                <h5 class="letter-user">${result.title}</h5>
+              </div>
+            </div>
+          `;
+            console.log(moviesFavoritesHtml);
+            $(moviesFavoritesHtml).appendTo(sectionFavorite);
+          });
+      } else if (movie['apiName'] === 'omdb') {
+        dataMovie = 'http://www.omdbapi.com?i=' + movie.id + '&apikey=bea6c355';
+        $.getJSON(dataMovie)
+          .then((result) => {
+            console.log(result);
+            moviesFavoritesHtml = `
+            <div class="col-6 col-sm-4 col-md-2">
+              <div class="well text-center">
+                <img src="${result.Poster}" class="img-fluid selected-movie" data-id="${result.imdbID}" data-api="omdb>
+                <h5 class="letter-user">${result.Title}</h5>
+              </div>
+            </div>
+          `;
+            $(moviesFavoritesHtml).appendTo(sectionFavorite);
+          });
+      };
+    };
+    sectionFavorite.html(moviesFavoritesHtml);
+  }
+
+  // traer todas las peliculas relacionadas a lo que el usuario escribio en el input
+  function getMovies(searchText) {
+    $.getJSON('http://www.omdbapi.com?s=' + encodeURI(searchText) + '&apikey=bea6c355')
+      .then((response) => {
+        console.log(response);
+        let movies = response.Search;
+        let moviesHtml = '';
+        $.each(movies, (index, movie) => {
+          moviesHtml += `
+          <div class="col-6 col-sm-4 col-md-2">
+            <div class="well text-center">
+              <img src="${movie.Poster}" class="img-fluid selected-movie" data-id="${movie.imdbID}" data-api="omdb">
+              <h5 class="letter-user">${movie.Title}</h5>
+            </div>
+          </div>
+        `;
+        });
+
+        $('#home-search').html(moviesHtml);
+        console.log($('.selected-movie'));
+        $('.selected-movie').click(function(event) {
+          event.preventDefault();
+          console.log('hice click');
+          var id = $(this).attr('data-id');
+          var nameApi = $(this).attr('data-api');
+          sessionStorage.id = id;
+          sessionStorage.nameApi = nameApi;
+          window.location.href = 'movie.html';
+          // getMovieData(id, nameApi);
+        });
+      })
+      .catch((err) => {
+        console.log(err);
+      });
+    inputTextSearch.val('');
+  }
+
+  // obtener peliculas segun el genero seleccionado
+  function searchDataGenre() {
+    var codeGenre = $(this).attr('data-code');
+    var nameSectionTab = '.' + $(this).attr('aria-controls');
+    console.log(codeGenre);
+    console.log(nameSectionTab);
+    $.getJSON('https://api.themoviedb.org/3/discover/movie?with_genres=' + codeGenre + '&api_key=5076f0f992d07860e10ee70c4f034e5e')
+      .then((result) => {
+        console.log(result);
+        let movies = result.results;
+        let moviesHtml = '';
+        $.each(movies, (index, movie) => {
+          moviesHtml += `
+          <div class="col-6 col-sm-4 col-md-2">
+            <div class="text-center">
+              <img src="http://image.tmdb.org/t/p/w185/${movie.poster_path}" class="img-fluid selected-movie" data-id="${movie.id}" data-api="tmdb">
+              <h5 class="letter-user">${movie.title}</h5>
+            </div>
+          </div>
+        `;
+        });
+        $(nameSectionTab).html(moviesHtml);
+        $('.selected-movie').click(function(event) {
+          event.preventDefault();
+          console.log('hice click');
+          var id = $(this).attr('data-id');
+          var nameApi = $(this).attr('data-api');
+          sessionStorage.id = id;
+          sessionStorage.nameApi = nameApi;
+          window.location.href = 'movie.html';
+          // getMovieData(id, nameApi);
+        });
+      }).catch((err) => {
+        console.log(err);
+      });
+  };
 
   // funcion para mostrar la informacion de la pelicula seleccionada
   function getMovieData(id, nameApi) {
